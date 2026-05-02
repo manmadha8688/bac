@@ -45,7 +45,7 @@ SECRET_KEY = 'django-insecure-otii&tv#m(df&n5bq=s$v7qxf@+#+z7ye-@6f@xm-h(sc+!j8d
 DEBUG = True
 
 ALLOWED_HOSTS = os.environ.get(
-    'DJANGO_ALLOWED_HOSTS',
+    '*',
     'localhost,127.0.0.1',
 ).split(',')
 

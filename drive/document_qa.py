@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import re
+import zipfile
 
 import requests
 from django.conf import settings
@@ -134,6 +135,61 @@ def _text_from_pdf(data: bytes) -> str | None:
         return None
 
 
+def _text_from_zip(data: bytes, archive_name: str) -> str | None:
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(data))
+    except Exception as e:
+        logger.warning('ZIP parse failed for %s: %s', archive_name, e)
+        return None
+
+    out_blocks: list[str] = []
+    total = 0
+    for info in zf.infolist():
+        if info.is_dir():
+            continue
+        if info.file_size > 10 * 1024 * 1024:
+            continue
+
+        path = info.filename
+        low = path.lower()
+        text: str | None = None
+
+        try:
+            with zf.open(info, 'r') as fp:
+                raw = fp.read()
+        except Exception:
+            logger.warning('Skipping unreadable ZIP entry %s in %s', path, archive_name, exc_info=True)
+            continue
+
+        if low.endswith(('.txt', '.md', '.markdown', '.csv', '.json')):
+            text = raw.decode('utf-8', errors='replace')
+        elif low.endswith('.pdf'):
+            text = _text_from_pdf(raw)
+        else:
+            continue
+
+        if not text:
+            continue
+        text = text.strip()
+        if not text:
+            continue
+
+        block = f'<<<ZIP_ENTRY archive="{archive_name}" path="{path}">>>\n{text}'
+        if total + len(block) > MAX_CHARS_PER_FILE:
+            room = MAX_CHARS_PER_FILE - total
+            if room < 200:
+                break
+            block = block[:room] + '\n… [truncated]'
+        out_blocks.append(block)
+        total += len(block)
+        if total >= MAX_CHARS_PER_FILE:
+            break
+
+    if not out_blocks:
+        return None
+    return '\n\n'.join(out_blocks)
+
+
 def _extract_file_text(service, meta: dict) -> str | None:
     fid = meta['id']
     name = meta.get('name') or fid
@@ -167,6 +223,10 @@ def _extract_file_text(service, meta: dict) -> str | None:
         raw = _download_bytes(service, fid)
         if raw:
             body = _text_from_pdf(raw)
+    elif mime == 'application/zip' or name.lower().endswith('.zip'):
+        raw = _download_bytes(service, fid)
+        if raw:
+            body = _text_from_zip(raw, name)
 
     if not body:
         return None
