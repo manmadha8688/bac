@@ -143,14 +143,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # --- CORS / CSRF (Vite dev server + session cookies via proxy) ---
 _cors_origins = os.environ.get(
     'DJANGO_CORS_ORIGINS',
-    'http://localhost:5173,http://127.0.0.1:5173',
+    'http://localhost:5173,http://127.0.0.1:5173,https://front-neutara.vercel.app',
 )
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()]
 CORS_ALLOW_CREDENTIALS = True
 
 _csrf = os.environ.get(
     'DJANGO_CSRF_TRUSTED_ORIGINS',
-    'http://localhost:5173,http://127.0.0.1:5173',
+    'http://localhost:5173,http://127.0.0.1:5173,https://front-neutara.vercel.app',
 )
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf.split(',') if o.strip()]
 
