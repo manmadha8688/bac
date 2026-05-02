@@ -44,10 +44,11 @@ SECRET_KEY = 'django-insecure-otii&tv#m(df&n5bq=s$v7qxf@+#+z7ye-@6f@xm-h(sc+!j8d
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = os.environ.get(
-    '*',
-    'localhost,127.0.0.1',
-).split(',')
+_allowed_hosts = os.environ.get(
+    'DJANGO_ALLOWED_HOSTS',
+    'back-neutara.onrender.com,localhost,127.0.0.1',
+)
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts.split(',') if h.strip()]
 
 
 # Application definition
