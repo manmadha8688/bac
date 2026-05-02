@@ -98,6 +98,32 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+DATABASE_URL = (os.environ.get('DATABASE_URL') or '').strip()
+if DATABASE_URL:
+    try:
+        import dj_database_url
+    except ImportError:  # pragma: no cover
+        raise RuntimeError('Install dj-database-url to use DATABASE_URL')
+    DATABASES = {'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
+else:
+    # No external DB configured (e.g. keep Render simple). Use local SQLite for any
+    # components that require a database connection.
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': str(BASE_DIR / 'db.sqlite3'),
+        },
+    }
+
+# Avoid requiring a DB-backed session store unless explicitly chosen.
+# For production without DATABASE_URL, signed-cookie sessions keep the backend usable
+# (note: backend OAuth mode will not work well with multi-step server redirects without
+# a persistent server-side session store).
+SESSION_ENGINE = os.environ.get(
+    'DJANGO_SESSION_ENGINE',
+    'django.contrib.sessions.backends.signed_cookies' if not DATABASE_URL else 'django.contrib.sessions.backends.db',
+)
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

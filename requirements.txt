@@ -8,3 +8,4 @@ psycopg[binary]>=3.1
 pypdf>=5.0
 requests>=2.28
 gunicorn
+dj-database-url>=2.2
