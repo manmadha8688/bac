@@ -13,8 +13,26 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env files; override=True so values in .env win over empty/wrong shells vars.
+_backend_env = BASE_DIR / '.env'
+for _env_path in (BASE_DIR.parent / '.env', _backend_env):
+    if _env_path.is_file():
+        load_dotenv(_env_path, encoding='utf-8-sig', override=True)
+
+
+def _clean_env_secret(name: str, default='') -> str:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    s = str(raw).strip()
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in "'\"":
+        s = s[1:-1].strip()
+    return s or default
 
 
 # Quick-start development settings - unsuitable for production
@@ -167,3 +185,20 @@ GOOGLE_OAUTH_SCOPES = [
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/drive.readonly',
 ]
+
+# Document Q&A (POST /api/chat) — key from env / backend/.env only; never hardcode secrets.
+OPENAI_API_KEY = _clean_env_secret('OPENAI_API_KEY', '')
+OPENAI_CHAT_MODEL = (os.environ.get('OPENAI_CHAT_MODEL') or 'gpt-4o-mini').strip()
+QA_MAX_DRIVE_FILES = int(os.environ.get('QA_MAX_DRIVE_FILES', '30'))
+QA_MAX_CONTEXT_CHARS = int(os.environ.get('QA_MAX_CONTEXT_CHARS', '120000'))
+QA_MAX_CHARS_PER_FILE = int(os.environ.get('QA_MAX_CHARS_PER_FILE', '35000'))
+QA_MAX_PDF_PAGES = int(os.environ.get('QA_MAX_PDF_PAGES', '40'))
+
+if DEBUG:
+    import logging
+
+    logging.getLogger(__name__).info(
+        'Neutra LLM: OPENAI_API_KEY set=%s, .env at %s',
+        bool(OPENAI_API_KEY),
+        _backend_env.resolve() if _backend_env.is_file() else '(no backend/.env)',
+    )

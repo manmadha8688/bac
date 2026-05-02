@@ -1,4 +1,3 @@
-import json
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -6,6 +5,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
+from .document_qa import parse_chat_body, run_document_qa
 from .drive_service import fetch_user_profile, list_files_in_folder, list_folders
 from .google_oauth import authorization_url, clear_session, exchange_code
 
@@ -91,19 +91,33 @@ def documents_list(request):
 @csrf_exempt
 @require_POST
 def chat(request):
-    """Placeholder until RAG is wired; keeps the SPA working."""
-    try:
-        body = json.loads(request.body.decode() or '{}')
-    except json.JSONDecodeError:
-        body = {}
-    _question = body.get('question', '')
+    """Aggregate folder document text + LLM answer (OPENAI_API_KEY)."""
+    body = parse_chat_body(request.body)
+    question = body.get('question') or ''
+    folder_id = body.get('folder_id') or ''
+    conversation = body.get('conversation')
+    google_access_token = body.get('google_access_token')
+
+    result = run_document_qa(
+        request=request,
+        folder_id=str(folder_id).strip(),
+        question=str(question).strip(),
+        conversation=conversation if isinstance(conversation, list) else [],
+        google_access_token=google_access_token
+        if isinstance(google_access_token, str)
+        else None,
+    )
+
+    err = result.get('error')
+    if err == 'no_credentials':
+        return _json_error(
+            result.get('answer') or 'Not authenticated for Drive on the server.',
+            401,
+        )
+
     return JsonResponse(
         {
-            'answer': (
-                'Document Q&A is not configured on the server yet. '
-                'Your Google Drive connection is active — wire an LLM + retrieval '
-                'pipeline to answer from indexed files.'
-            ),
-            'citations': [],
+            'answer': result.get('answer') or '',
+            'citations': result.get('citations') or [],
         },
     )
