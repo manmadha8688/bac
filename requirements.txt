@@ -1,0 +1,6 @@
+Django>=5.0,<6
+django-cors-headers>=4.3
+google-auth>=2.29
+google-auth-oauthlib>=1.2
+google-api-python-client>=2.128
+psycopg[binary]>=3.1
