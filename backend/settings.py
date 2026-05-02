@@ -154,9 +154,18 @@ _csrf = os.environ.get(
 )
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf.split(',') if o.strip()]
 
-SESSION_COOKIE_SAMESITE = 'Lax'
+_cross_site = os.environ.get('DJANGO_CROSS_SITE_COOKIES', '').strip().lower() in (
+    '1',
+    'true',
+    'yes',
+)
+# Vercel (or any separate frontend origin) + API on Render: browser must send session/CSRF
+# cookies on cross-site XHR/fetch. That requires SameSite=None and Secure cookies.
+SESSION_COOKIE_SAMESITE = 'None' if _cross_site else 'Lax'
+SESSION_COOKIE_SECURE = bool(_cross_site)
 SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'None' if _cross_site else 'Lax'
+CSRF_COOKIE_SECURE = bool(_cross_site)
 
 # Where to send the browser after Google OAuth (your React app).
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
