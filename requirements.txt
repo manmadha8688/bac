@@ -7,3 +7,4 @@ google-api-python-client>=2.128
 psycopg[binary]>=3.1
 pypdf>=5.0
 requests>=2.28
+gunicorn
